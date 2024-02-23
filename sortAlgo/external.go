@@ -74,8 +74,9 @@ func MergeChunks(chunkFileNames []string, outputFilePath string) error {
 
 	// Open input files
 	for i := 0; i < len(chunkFileNames); i++ {
-		fileName := strconv.Itoa(i)
-		file, err := os.Open(fileName)
+		fileIndex := strconv.Itoa(i)
+		pathFileName := common.PATH_TEMP + "chunk_" + fileIndex + ".txt"
+		file, err := os.Open(pathFileName)
 		if err != nil {
 			fmt.Println("Error opening file:", err)
 			return err
