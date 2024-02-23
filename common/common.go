@@ -11,5 +11,6 @@ const (
 	MINVALUE                       = 1
 	NUMBER_OF_NUMBER               = 4_000_000
 	NUMBER_OF_GOROUTINE            = 50
-	CHUNK_SIZE                     = NUMBER_OF_NUMBER / 40
+	NUMBER_OF_CHUCKS_FILE          = 40
+	CHUNK_SIZE                     = NUMBER_OF_NUMBER / NUMBER_OF_CHUCKS_FILE
 )

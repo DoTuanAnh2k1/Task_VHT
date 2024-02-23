@@ -1,7 +1,6 @@
 package sortAlgo
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"sort"
@@ -19,66 +18,93 @@ import (
 		- error
 */
 
-func CreateChunks(inputFilePath string) ([]string, error) {
-	file, err := os.Open(inputFilePath)
-	if err != nil {
-		return nil, err
+func CreateChunks(inputFilePath string) ([]*os.File, error) {
+	// For big input file
+	in := openFile(inputFilePath, "r")
+	defer in.Close()
+
+	// Output scratch files
+	var out []*os.File
+	for i := 0; i < common.NUMBER_OF_CHUCKS_FILE; i++ {
+		// Convert i to string
+		fileName := strconv.Itoa(i)
+		path := common.PATH_TEMP + "/chunk_" + fileName + ".txt"
+
+		// Open output files in write mode.
+		file := openFile(path, "w")
+		defer file.Close()
+		out = append(out, file)
 	}
-	defer file.Close()
 
-	chunkFileNames := []string{}
+	// Allocate a dynamic array large enough to accommodate runs of size common.CHUCK_SIZE
+	arr := make([]int64, common.CHUNK_SIZE)
 
-	scanner := bufio.NewScanner(file)
-	chunkIndex := 0
-	for scanner.Scan() {
-		path_chunk := common.PATH_TEMP + "/chunk_%d.txt"
-		chunkFileName := fmt.Sprintf(path_chunk, chunkIndex)
-		chunkFile, err := os.Create(chunkFileName)
-		if err != nil {
-			return nil, err
-		}
-		chunkFileNames = append(chunkFileNames, chunkFileName)
+	moreInput := true
+	nextOutputFile := 0
 
-		chunk := []int64{}
-		for i := 0; i < common.CHUNK_SIZE && scanner.Scan(); i++ {
-			valueText := scanner.Text()
-			value, err := strconv.ParseInt(valueText, 10, 64)
-			if err != nil {
-				return nil, err
+	for moreInput && nextOutputFile != common.NUMBER_OF_CHUCKS_FILE {
+		// Write common.CHUCK_SIZE elements into arr from the input file
+		for i := 0; i < common.CHUNK_SIZE; i++ {
+			var element int64
+			if _, err := fmt.Fscanf(in, "%d", &element); err != nil {
+				moreInput = false
+				break
 			}
-			chunk = append(chunk, value)
+			arr[i] = element
 		}
 
-		sort.Slice(chunk, func(i, j int) bool {
-			return chunk[i] < chunk[j]
+		// Sort array using library
+		sort.Slice(arr, func(i, j int) bool {
+			return arr[i] < arr[j]
 		})
 
-		for _, value := range chunk {
-			line := strconv.FormatInt(value, 10)
-			fmt.Fprintln(chunkFile, line)
+		// Write the records to the appropriate scratch output file
+		// Can't assume that the loop runs to runSize
+		// Since the last run's length may be less than runSize
+		for j := 0; j < len(arr); j++ {
+			fmt.Fprintf(out[nextOutputFile], "%d ", arr[j])
 		}
 
-		chunkFile.Close()
-		chunkIndex++
+		nextOutputFile++
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, err
+	// fmt.Println(nextOutputFile)
+	// Close input and output files
+	for i := 0; i < common.NUMBER_OF_CHUCKS_FILE; i++ {
+		out[i].Close()
 	}
-
-	return chunkFileNames, nil
+	return out, nil
 }
 
-func MergeChunks(chunkFileNames []string, outputFilePath string) error {
-	var in []*os.File
+// openFile opens a file with the given name and mode
+func openFile(fileName, mode string) *os.File {
+	file, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, os.ModePerm)
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+	}
+	return file
+}
 
-	// Open input files
-	for i := 0; i < len(chunkFileNames); i++ {
-		fileIndex := strconv.Itoa(i)
-		pathFileName := common.PATH_TEMP + "/chunk_" + fileIndex + ".txt"
-		file, err := os.Open(pathFileName)
+func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
+	// var in []*os.File
+
+	// // Open input files
+	// for i := 0; i < len(chunkFileNames); i++ {
+	// 	fileIndex := strconv.Itoa(i)
+	// 	pathFileName := common.PATH_TEMP + "/chunk_" + fileIndex + ".txt"
+	// 	file, err := os.Open(pathFileName)
+	// 	if err != nil {
+	// 		fmt.Println("Error opening file:", err)
+	// 		return err
+	// 	}
+	// 	defer file.Close()
+	// 	in = append(in, file)
+	// }
+	var in []*os.File
+	for _, fileOut := range out_createChunks {
+		file, err := os.Open(fileOut.Name())
 		if err != nil {
-			fmt.Println("Error opening file:", err)
+			fmt.Println("Error opening file: ", err)
 			return err
 		}
 		defer file.Close()
@@ -97,13 +123,13 @@ func MergeChunks(chunkFileNames []string, outputFilePath string) error {
 	fmt.Println("Create Min Heap")
 	fmt.Println("===================================================================")
 	// Create a min heap with k heap nodes
-	harr := make([]model.MinHeapNode, len(chunkFileNames))
+	harr := make([]model.MinHeapNode, common.NUMBER_OF_CHUCKS_FILE)
 	i := 0
-	for ; i < len(chunkFileNames); i++ {
+	for ; i < common.NUMBER_OF_CHUCKS_FILE; i++ {
 		// Break if no output file is empty and index i will be the number of input files
 		// fmt.Println(in[i])
 		// fmt.Println(harr[i])
-		_, err := fmt.Fscanf(in[i], "%d", &harr[i].Element)
+		_, err := fmt.Fscanf(in[i], "%d ", &harr[i].Element)
 		// fmt.Println(value)
 		if err != nil {
 			fmt.Println(err)
@@ -117,7 +143,7 @@ func MergeChunks(chunkFileNames []string, outputFilePath string) error {
 	// Create the heap
 	hp := model.NewMinHeap(harr[:], i)
 	count := 0
-
+	fmt.Println(hp)
 	fmt.Println("===================================================================")
 	fmt.Println("Merge it")
 	fmt.Println("===================================================================")
@@ -158,6 +184,7 @@ func ExternalMergeSort(inputFilePath, outputFilePath string) error {
 	fmt.Println("===================================================================")
 	chunkFileNames, err := CreateChunks(inputFilePath)
 	if err != nil {
+		fmt.Println("External Merge Sort, error: ", err)
 		return err
 	}
 	fmt.Println("===================================================================")
@@ -174,7 +201,8 @@ func ExternalMergeSort(inputFilePath, outputFilePath string) error {
 	fmt.Println("===================================================================")
 
 	for _, chunkFileName := range chunkFileNames {
-		if err := os.Remove(chunkFileName); err != nil {
+		err := os.Remove(chunkFileName.Name())
+		if err != nil {
 			return err
 		}
 	}
