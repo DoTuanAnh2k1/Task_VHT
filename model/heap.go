@@ -1,59 +1,75 @@
 package model
 
+// MinHeapNode represents a node in the min heap
 type MinHeapNode struct {
-	Value int
-	Index int
+	// The element to be stored
+	Element int
+
+	// Index of the array from which the element is taken
+	I int
 }
 
+// MinHeap represents the Min Heap data structure
 type MinHeap struct {
-	Nodes []MinHeapNode
+	// Slice to store elements in heap
+	Harr []MinHeapNode
+
+	// Size of min heap
+	HeapSize int
 }
 
-func (h *MinHeap) Len() int {
-	return len(h.Nodes)
-}
-
-func (h *MinHeap) Less(i, j int) bool {
-	return h.Nodes[i].Value < h.Nodes[j].Value
-}
-
-func (h *MinHeap) Swap(i, j int) {
-	h.Nodes[i], h.Nodes[j] = h.Nodes[j], h.Nodes[i]
-}
-
-func (h *MinHeap) Push(x interface{}) {
-	h.Nodes = append(h.Nodes, x.(MinHeapNode))
-}
-
-func (h *MinHeap) Pop() MinHeapNode {
-	old := h.Nodes
-	n := len(old)
-	x := old[n-1]
-	h.Nodes = old[0 : n-1]
-	return x
-}
-
-func (h *MinHeap) Init() {
-	n := len(h.Nodes)
-	for i := n/2 - 1; i >= 0; i-- {
-		h.down(i, n)
+// NewMinHeap creates a new MinHeap with the given array and size
+func NewMinHeap(a []MinHeapNode, size int) *MinHeap {
+	return &MinHeap{
+		Harr:     a,
+		HeapSize: size,
 	}
 }
 
-func (h *MinHeap) down(i, n int) {
-	for {
-		j1 := 2*i + 1
-		if j1 >= n || j1 < 0 { // j1 < 0 after int overflow
-			break
-		}
-		j2 := j1 + 1
-		if j2 < n && h.Less(j2, j1) {
-			j1 = j2
-		}
-		if !h.Less(j1, i) {
-			break
-		}
-		h.Swap(i, j1)
-		i = j1
+// MinHeapify maintains the heap property for a subtree with root at the given index
+func (heap *MinHeap) MinHeapify(i int) {
+	l := heap.Left(i)
+	r := heap.Right(i)
+	smallest := i
+
+	if l < heap.HeapSize && heap.Harr[l].Element < heap.Harr[i].Element {
+		smallest = l
 	}
+
+	if r < heap.HeapSize && heap.Harr[r].Element < heap.Harr[smallest].Element {
+		smallest = r
+	}
+
+	if smallest != i {
+		heap.swap(i, smallest)
+		heap.MinHeapify(smallest)
+	}
+}
+
+// Left returns the index of the left child of the node at index i
+func (heap *MinHeap) Left(i int) int {
+	return 2*i + 1
+}
+
+// Right returns the index of the right child of the node at index i
+func (heap *MinHeap) Right(i int) int {
+	return 2*i + 2
+}
+
+// GetMin returns the root of the heap
+func (heap *MinHeap) GetMin() MinHeapNode {
+	return heap.Harr[0]
+}
+
+// ReplaceMin replaces the root with a new node x and heapifies the new root
+func (heap *MinHeap) ReplaceMin(x MinHeapNode) {
+	heap.Harr[0] = x
+	heap.MinHeapify(0)
+}
+
+// swap swaps two elements in the heap
+func (heap *MinHeap) swap(x, y int) {
+	temp := heap.Harr[x]
+	heap.Harr[x] = heap.Harr[y]
+	heap.Harr[y] = temp
 }
