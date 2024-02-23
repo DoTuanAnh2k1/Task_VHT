@@ -129,7 +129,7 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 		// Break if no output file is empty and index i will be the number of input files
 		// fmt.Println(in[i])
 		// fmt.Println(harr[i])
-		_, err := fmt.Fscanf(in[i], "%d ", &harr[i].Element)
+		_, err := fmt.Fscanf(in[i], "%d", &harr[i].Element)
 		// fmt.Println(value)
 		if err != nil {
 			fmt.Println(err)
