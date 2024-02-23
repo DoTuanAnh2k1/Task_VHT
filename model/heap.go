@@ -19,11 +19,21 @@ type MinHeap struct {
 }
 
 // NewMinHeap creates a new MinHeap with the given array and size
-func NewMinHeap(a []MinHeapNode, size int) *MinHeap {
-	return &MinHeap{
-		Harr:     a,
-		HeapSize: size,
+func NewMinHeap(mharr []MinHeapNode, size int) *MinHeap {
+	heapSize := size
+	harr := make([]MinHeapNode, len(mharr))
+
+	copy(harr, mharr)
+	mh := &MinHeap{
+		Harr:     harr,
+		HeapSize: heapSize,
 	}
+	i := size/2 - 1
+	for i >= 0 {
+		mh.MinHeapify(i)
+		i--
+	}
+	return mh
 }
 
 // MinHeapify maintains the heap property for a subtree with root at the given index
