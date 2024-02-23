@@ -2,22 +2,20 @@ package main
 
 import (
 	"sync"
-
 	"main.go/worker"
 )
 
 func main() {
 	var wg sync.WaitGroup
 	// Create Data Input
-	//
-	// f := file.NewFileManager()
-	// f, err := file.CreateData(
+	
+	// f := model.NewFileManager()
+	// _, err := model.CreateData(
 	// 	common.PATH_INPUT,
 	// 	common.MINVALUE,
 	// 	common.MAXVALUE,
 	// 	common.NUMBER_OF_NUMBER,
 	// )
-	// if err != nil {
 	// 	fmt.Println("Cannot Create Data: ", err.Error())
 	// 	return
 	// }

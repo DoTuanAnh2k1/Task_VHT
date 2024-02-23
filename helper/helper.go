@@ -72,12 +72,22 @@ func CreateChunks(inputFilePath string) ([]string, error) {
 		chunkFileNames = append(chunkFileNames, chunkFileName)
 
 		chunk := []string{}
+		chunk := []int64{}
 		for i := 0; i < common.CHUNK_SIZE && scanner.Scan(); i++ {
-			chunk = append(chunk, scanner.Text())
+			valueText := scanner.Text()
+			value, err := strconv.ParseInt(valueText, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			chunk = append(chunk, value)
 		}
 
-		sort.Strings(chunk)
-		for _, line := range chunk {
+		sort.Slice(chunk, func(i, j int) bool {
+			return chunk[i] < chunk[j]
+		})
+
+		for _, value := range chunk {
+			line := strconv.FormatInt(value, 10)
 			fmt.Fprintln(chunkFile, line)
 		}
 
