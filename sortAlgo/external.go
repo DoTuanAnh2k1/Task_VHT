@@ -75,7 +75,7 @@ func MergeChunks(chunkFileNames []string, outputFilePath string) error {
 	// Open input files
 	for i := 0; i < len(chunkFileNames); i++ {
 		fileIndex := strconv.Itoa(i)
-		pathFileName := common.PATH_TEMP + "chunk_" + fileIndex + ".txt"
+		pathFileName := common.PATH_TEMP + "/chunk_" + fileIndex + ".txt"
 		file, err := os.Open(pathFileName)
 		if err != nil {
 			fmt.Println("Error opening file:", err)
@@ -93,29 +93,40 @@ func MergeChunks(chunkFileNames []string, outputFilePath string) error {
 	}
 	defer out.Close()
 
+	fmt.Println("===================================================================")
+	fmt.Println("Create Min Heap")
+	fmt.Println("===================================================================")
 	// Create a min heap with k heap nodes
-	harr := make([]model.MinHeapNode, len(outputFilePath))
+	harr := make([]model.MinHeapNode, len(chunkFileNames))
 	i := 0
 	for ; i < len(chunkFileNames); i++ {
 		// Break if no output file is empty and index i will be the number of input files
-		if _, err := fmt.Fscanf(in[i], "%d", &harr[i].Element); err != nil {
+		// fmt.Println(in[i])
+		// fmt.Println(harr[i])
+		_, err := fmt.Fscanf(in[i], "%d", &harr[i].Element)
+		// fmt.Println(value)
+		if err != nil {
+			fmt.Println(err)
 			break
 		}
 
 		// Index of scratch output file
 		harr[i].I = i
 	}
-
+	// fmt.Println(harr)
 	// Create the heap
-	hp := model.NewMinHeap(harr[:i], i)
+	hp := model.NewMinHeap(harr[:], i)
 	count := 0
 
+	fmt.Println("===================================================================")
+	fmt.Println("Merge it")
+	fmt.Println("===================================================================")
 	// Now one by one get the minimum element from the min heap and replace it with the next element
 	// Run until all filled input files reach EOF
 	for count != i {
 		// Get the minimum element and store it in the output file
 		root := hp.GetMin()
-		fmt.Fprintf(out, "%d ", root.Element)
+		fmt.Fprintf(out, "%d \n", root.Element)
 
 		// Find the next element that will replace the current root of the heap.
 		// The next element belongs to the same input file as the current min element.
@@ -142,15 +153,25 @@ func OpenFile(fileName, mode string) (*os.File, error) {
 // External Merge Sort algorithm
 
 func ExternalMergeSort(inputFilePath, outputFilePath string) error {
+	fmt.Println("===================================================================")
+	fmt.Println("Create Chunks")
+	fmt.Println("===================================================================")
 	chunkFileNames, err := CreateChunks(inputFilePath)
 	if err != nil {
 		return err
 	}
+	fmt.Println("===================================================================")
+	fmt.Println("Merge Chunks")
+	fmt.Println("===================================================================")
 
 	err = MergeChunks(chunkFileNames, outputFilePath)
 	if err != nil {
 		return err
 	}
+
+	fmt.Println("===================================================================")
+	fmt.Println("Remove Chunks")
+	fmt.Println("===================================================================")
 
 	for _, chunkFileName := range chunkFileNames {
 		if err := os.Remove(chunkFileName); err != nil {

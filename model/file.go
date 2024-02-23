@@ -72,6 +72,9 @@ func generateRandomNumbers(n, min, max int64) []int64 {
 }
 
 func CreateData(path string, minValue, maxValue, numCount int64) (*FileManager, error) {
+	fmt.Println("===================================================================")
+	fmt.Println("Create data")
+	fmt.Println("===================================================================")
 	numbers := generateRandomNumbers(numCount, minValue, maxValue)
 
 	file := NewFileManager()

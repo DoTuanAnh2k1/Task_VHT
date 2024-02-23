@@ -1,24 +1,29 @@
 package main
 
 import (
+	"fmt"
 	"sync"
+
+	"main.go/common"
+	"main.go/model"
 	"main.go/worker"
 )
 
 func main() {
 	var wg sync.WaitGroup
 	// Create Data Input
-	
+
 	// f := model.NewFileManager()
-	// _, err := model.CreateData(
-	// 	common.PATH_INPUT,
-	// 	common.MINVALUE,
-	// 	common.MAXVALUE,
-	// 	common.NUMBER_OF_NUMBER,
-	// )
-	// 	fmt.Println("Cannot Create Data: ", err.Error())
-	// 	return
-	// }
+	_, err := model.CreateData(
+		common.PATH_INPUT,
+		common.MINVALUE,
+		common.MAXVALUE,
+		common.NUMBER_OF_NUMBER,
+	)
+	if err != nil {
+		fmt.Println("Cannot Create Data: ", err.Error())
+		return
+	}
 
 	// arrayInPut, err := f.ReadFromFile(common.PATH_INPUT)
 	// if err != nil {
