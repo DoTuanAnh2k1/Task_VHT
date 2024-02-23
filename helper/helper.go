@@ -2,6 +2,7 @@ package helper
 
 import (
 	"bufio"
+	"strconv"
 	"fmt"
 	"os"
 	"sort"
@@ -71,7 +72,6 @@ func CreateChunks(inputFilePath string) ([]string, error) {
 		}
 		chunkFileNames = append(chunkFileNames, chunkFileName)
 
-		chunk := []string{}
 		chunk := []int64{}
 		for i := 0; i < common.CHUNK_SIZE && scanner.Scan(); i++ {
 			valueText := scanner.Text()
