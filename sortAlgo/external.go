@@ -37,20 +37,20 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 	}
 
 	// Allocate a dynamic array large enough to accommodate runs of size common.CHUCK_SIZE
-	arr := make([]int64, common.CHUNK_SIZE)
 
 	moreInput := true
 	nextOutputFile := 0
 
 	for moreInput && nextOutputFile != common.NUMBER_OF_CHUCKS_FILE {
 		// Write common.CHUCK_SIZE elements into arr from the input file
+		arr := []int64{}
 		for i := 0; i < common.CHUNK_SIZE; i++ {
 			var element int64
 			if _, err := fmt.Fscanf(in, "%d", &element); err != nil {
 				moreInput = false
 				break
 			}
-			arr[i] = element
+			arr = append(arr, element)
 		}
 
 		// Sort array using library
@@ -86,20 +86,6 @@ func openFile(fileName, mode string) *os.File {
 }
 
 func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
-	// var in []*os.File
-
-	// // Open input files
-	// for i := 0; i < len(chunkFileNames); i++ {
-	// 	fileIndex := strconv.Itoa(i)
-	// 	pathFileName := common.PATH_TEMP + "/chunk_" + fileIndex + ".txt"
-	// 	file, err := os.Open(pathFileName)
-	// 	if err != nil {
-	// 		fmt.Println("Error opening file:", err)
-	// 		return err
-	// 	}
-	// 	defer file.Close()
-	// 	in = append(in, file)
-	// }
 	var in []*os.File
 	for _, fileOut := range out_createChunks {
 		file, err := os.Open(fileOut.Name())
@@ -143,7 +129,7 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 	// Create the heap
 	hp := model.NewMinHeap(harr[:], i)
 	count := 0
-	fmt.Println(hp)
+	// fmt.Println(hp)
 	fmt.Println("===================================================================")
 	fmt.Println("Merge it")
 	fmt.Println("===================================================================")
@@ -152,12 +138,12 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 	for count != i {
 		// Get the minimum element and store it in the output file
 		root := hp.GetMin()
-		fmt.Fprintf(out, "%d \n", root.Element)
+		fmt.Fprintf(out, "%d\n", root.Element)
 
 		// Find the next element that will replace the current root of the heap.
 		// The next element belongs to the same input file as the current min element.
 		if _, err := fmt.Fscanf(in[root.I], "%d", &root.Element); err != nil {
-			root.Element = int(^uint(0) >> 1) // INT_MAX
+			root.Element = int(common.MAX_INT) // INT_MAX
 			count++
 		}
 
@@ -179,6 +165,8 @@ func OpenFile(fileName, mode string) (*os.File, error) {
 // External Merge Sort algorithm
 
 func ExternalMergeSort(inputFilePath, outputFilePath string) error {
+	time_create_chunks := model.NewTimer()
+	time_create_chunks.Start()
 	fmt.Println("===================================================================")
 	fmt.Println("Create Chunks")
 	fmt.Println("===================================================================")
@@ -187,6 +175,10 @@ func ExternalMergeSort(inputFilePath, outputFilePath string) error {
 		fmt.Println("External Merge Sort, error: ", err)
 		return err
 	}
+	fmt.Println("Create Chunks success, runtime: ", time_create_chunks.Stop())
+
+	time_merge_chunks := model.NewTimer()
+	time_merge_chunks.Start()
 	fmt.Println("===================================================================")
 	fmt.Println("Merge Chunks")
 	fmt.Println("===================================================================")
@@ -195,7 +187,10 @@ func ExternalMergeSort(inputFilePath, outputFilePath string) error {
 	if err != nil {
 		return err
 	}
+	fmt.Println("Merge Chunks success, runtime: ", time_merge_chunks.Stop())
 
+	time_remove_chunks := model.NewTimer()
+	time_remove_chunks.Start()
 	fmt.Println("===================================================================")
 	fmt.Println("Remove Chunks")
 	fmt.Println("===================================================================")
@@ -206,6 +201,8 @@ func ExternalMergeSort(inputFilePath, outputFilePath string) error {
 			return err
 		}
 	}
+
+	fmt.Println("Remove Chunks success, runtime: ", time_remove_chunks.Stop())
 
 	return nil
 }

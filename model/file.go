@@ -7,8 +7,6 @@ import (
 	"os"
 	"strconv"
 	"time"
-
-	"main.go/common"
 )
 
 // File Manager: Read, Write
@@ -60,30 +58,25 @@ func (fm *FileManager) WriteToFile(numbers []int64, filePath string) error {
 	return nil
 }
 
-func generateRandomNumbers(n, min, max int64) []int64 {
-	numbers := make([]int64, n)
-	rand.Seed(time.Now().UnixNano())
-
-	for i := int64(0); i < n; i++ {
-		numbers[i] = rand.Int63n(max-min+1) + min
-	}
-
-	return numbers
-}
-
-func CreateData(path string, minValue, maxValue, numCount int64) (*FileManager, error) {
+func CreateData(path string, minValue, maxValue, numCount int64) error {
+	t := NewTimer()
+	t.Start()
 	fmt.Println("===================================================================")
 	fmt.Println("Create data")
 	fmt.Println("===================================================================")
-	numbers := generateRandomNumbers(numCount, minValue, maxValue)
-
-	file := NewFileManager()
-
-	err := file.WriteToFile(numbers, common.PATH_INPUT)
+	file, err := os.Create(path)
 	if err != nil {
-		fmt.Println("Error: ", err.Error())
-		return file, err
+		return err
 	}
-
-	return file, nil
+	defer file.Close()
+	rand.Seed(time.Now().UnixNano())
+	for i := int64(0); i < numCount; i++ {
+		number := rand.Int63n(maxValue-minValue+1) + minValue
+		_, err := fmt.Fprintln(file, number)
+		if err != nil {
+			return err
+		}
+	}
+	fmt.Println("Time gen data: ", t.Stop())
+	return nil
 }
