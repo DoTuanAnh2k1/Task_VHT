@@ -3,7 +3,7 @@ package model
 // MinHeapNode represents a node in the min heap
 type MinHeapNode struct {
 	// The element to be stored
-	Element int
+	Element int64
 
 	// Index of the array from which the element is taken
 	I int

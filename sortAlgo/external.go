@@ -1,6 +1,7 @@
 package sortAlgo
 
 import (
+	"encoding/binary"
 	"fmt"
 	"os"
 	"sort"
@@ -44,12 +45,17 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 	for moreInput && nextOutputFile != common.NUMBER_OF_CHUCKS_FILE {
 		// Write common.CHUCK_SIZE elements into arr from the input file
 		arr := []int64{}
+		buffer := make([]byte, 8) // 8 bytes for int64
+
 		for i := 0; i < common.CHUNK_SIZE; i++ {
-			var element int64
-			if _, err := fmt.Fscanf(in, "%d", &element); err != nil {
+			_, err := in.Read(buffer)
+			if err != nil {
+				fmt.Println("Read buffer fail, error: ", err)
 				moreInput = false
 				break
 			}
+
+			element := int64(binary.LittleEndian.Uint64(buffer))
 			arr = append(arr, element)
 		}
 
@@ -111,17 +117,19 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 	// Create a min heap with k heap nodes
 	harr := make([]model.MinHeapNode, common.NUMBER_OF_CHUCKS_FILE)
 	i := 0
+	buffer := make([]byte, 8)
 	for ; i < common.NUMBER_OF_CHUCKS_FILE; i++ {
 		// Break if no output file is empty and index i will be the number of input files
-		// fmt.Println(in[i])
-		// fmt.Println(harr[i])
-		_, err := fmt.Fscanf(in[i], "%d", &harr[i].Element)
+
+		// _, err := fmt.Fscanf(in[i], "%d", &harr[i].Element)
+		_, err := in[i].Read(buffer)
 		// fmt.Println(value)
 		if err != nil {
 			fmt.Println(err)
 			break
 		}
 
+		harr[i].Element = int64(binary.LittleEndian.Uint64(buffer))
 		// Index of scratch output file
 		harr[i].I = i
 	}
@@ -143,7 +151,7 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 		// Find the next element that will replace the current root of the heap.
 		// The next element belongs to the same input file as the current min element.
 		if _, err := fmt.Fscanf(in[root.I], "%d", &root.Element); err != nil {
-			root.Element = int(common.MAX_INT) // INT_MAX
+			root.Element = int64(common.MAX_INT) // INT_MAX
 			count++
 		}
 
