@@ -164,10 +164,25 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 
 		// Find the next element that will replace the current root of the heap.
 		// The next element belongs to the same input file as the current min element.
-		if _, err := fmt.Fscanf(in[root.I], "%d", &root.Element); err != nil {
-			root.Element = int64(common.MAX_INT) // INT_MAX
+		var element int64
+		data := make([]byte, 8)
+		_, err := in[root.I].Read(data)
+		if err != nil {
+			root.Element = int64(common.MAX_INT)
 			count++
 		}
+
+		buffer := bytes.NewBuffer(data)
+		err = binary.Read(buffer, binary.BigEndian, &element)
+		if err != nil {
+			fmt.Println("Read binary fail, err: ", err)
+			return err
+		}
+
+		// if _, err := fmt.Fscanf(in[root.I], "%d", &root.Element); err != nil {
+		// 	root.Element = int64(common.MAX_INT) // INT_MAX
+		// 	count++
+		// }
 
 		// Replace root with the next element of the input file
 		hp.ReplaceMin(root)
