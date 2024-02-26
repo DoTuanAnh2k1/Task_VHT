@@ -1,11 +1,14 @@
 package sortAlgo
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"os"
 	"sort"
 	"strconv"
+	"strings"
 
 	"main.go/common"
 	"main.go/model"
@@ -28,8 +31,8 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 	var out []*os.File
 	for i := 0; i < common.NUMBER_OF_CHUCKS_FILE; i++ {
 		// Convert i to string
-		fileName := strconv.Itoa(i)
-		path := common.PATH_TEMP + "/chunk_" + fileName + ".txt"
+		fileNameId := strconv.Itoa(i)
+		path := common.PATH_TEMP + "/chunk_" + fileNameId + ".bin"
 
 		// Open output files in write mode.
 		file := openFile(path, "w")
@@ -42,20 +45,21 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 	moreInput := true
 	nextOutputFile := 0
 
+	readFile := bufio.NewReader(in)
 	for moreInput && nextOutputFile != common.NUMBER_OF_CHUCKS_FILE {
 		// Write common.CHUCK_SIZE elements into arr from the input file
 		arr := []int64{}
-		buffer := make([]byte, 8) // 8 bytes for int64
 
 		for i := 0; i < common.CHUNK_SIZE; i++ {
-			_, err := in.Read(buffer)
+			element, err := readInt64(readFile)
 			if err != nil {
-				fmt.Println("Read buffer fail, error: ", err)
+				fmt.Println("Read to create chunks fail, err: ", err)
 				moreInput = false
 				break
 			}
-
-			element := int64(binary.LittleEndian.Uint64(buffer))
+			if element == 0 {
+				break
+			}
 			arr = append(arr, element)
 		}
 
@@ -68,7 +72,13 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 		// Can't assume that the loop runs to runSize
 		// Since the last run's length may be less than runSize
 		for j := 0; j < len(arr); j++ {
-			fmt.Fprintf(out[nextOutputFile], "%d ", arr[j])
+			var bin_buff bytes.Buffer
+			binary.Write(&bin_buff, binary.BigEndian, arr[j])
+			_, err := out[nextOutputFile].Write(bin_buff.Bytes())
+			if err != nil {
+				fmt.Println("Error while write to binary file, err: ", err)
+				return nil, err
+			}
 		}
 
 		nextOutputFile++
@@ -117,19 +127,23 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 	// Create a min heap with k heap nodes
 	harr := make([]model.MinHeapNode, common.NUMBER_OF_CHUCKS_FILE)
 	i := 0
-	buffer := make([]byte, 8)
 	for ; i < common.NUMBER_OF_CHUCKS_FILE; i++ {
-		// Break if no output file is empty and index i will be the number of input files
-
-		// _, err := fmt.Fscanf(in[i], "%d", &harr[i].Element)
-		_, err := in[i].Read(buffer)
-		// fmt.Println(value)
+		var element int64
+		data := make([]byte, 8)
+		_, err := in[i].Read(data)
 		if err != nil {
-			fmt.Println(err)
-			break
+			fmt.Println("Read From binary file fail, err: ", err)
+			return err
 		}
 
-		harr[i].Element = int64(binary.LittleEndian.Uint64(buffer))
+		buffer := bytes.NewBuffer(data)
+		err = binary.Read(buffer, binary.BigEndian, &element)
+		if err != nil {
+			fmt.Println("Read binary fail, err: ", err)
+			return err
+		}
+		// _, err := fmt.Fscanf(in[i], "%d", &harr[i].Element)
+		harr[i].Element = element
 		// Index of scratch output file
 		harr[i].I = i
 	}
@@ -213,4 +227,19 @@ func ExternalMergeSort(inputFilePath, outputFilePath string) error {
 	fmt.Println("Remove Chunks success, runtime: ", time_remove_chunks.Stop())
 
 	return nil
+}
+
+func readInt64(in *bufio.Reader) (int64, error) {
+	nStr, err := in.ReadString('\n')
+	if err != nil {
+		return 0, err
+	}
+	nStr = strings.ReplaceAll(nStr, "\r", "")
+	nStr = strings.ReplaceAll(nStr, "\n", "")
+	n, err := strconv.ParseInt(nStr, 10, 64)
+	if err != nil {
+		fmt.Println("Error reading file, error: ", err)
+		return 0, err
+	}
+	return n, nil
 }
