@@ -14,15 +14,17 @@ func main() {
 	// Create Data Input
 
 	// f := model.NewFileManager()
-	err := model.CreateData(
-		common.PATH_INPUT,
-		common.MINVALUE,
-		common.MAXVALUE,
-		common.NUMBER_OF_NUMBER,
-	)
-	if err != nil {
-		fmt.Println("Cannot Create Data: ", err.Error())
-		return
+	if false {
+		err := model.CreateData(
+			common.PATH_INPUT,
+			common.MINVALUE,
+			common.MAXVALUE,
+			common.NUMBER_OF_NUMBER,
+		)
+		if err != nil {
+			fmt.Println("Cannot Create Data: ", err.Error())
+			return
+		}
 	}
 
 	// arrayInPut, err := f.ReadFromFile(common.PATH_INPUT)

@@ -14,14 +14,6 @@ import (
 	"main.go/model"
 )
 
-/*
-	Input:
-		- inputFilePath: path to file contains input 		Type: string
-	Output:
-		- List of file created								Type: []string
-		- error
-*/
-
 func CreateChunks(inputFilePath string) ([]*os.File, error) {
 	// For big input file
 	in := openFile(inputFilePath, "r")
@@ -44,12 +36,20 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 
 	moreInput := true
 	nextOutputFile := 0
-
 	readFile := bufio.NewReader(in)
+	total_time_sorting := float64(0)
+	total_time_read_file := float64(0)
+	total_time_write_file := float64(0)
+
 	for moreInput && nextOutputFile != common.NUMBER_OF_CHUCKS_FILE {
+		if nextOutputFile%500 == 0 {
+			fmt.Println("Working on file chunk id: ", nextOutputFile)
+		}
 		// Write common.CHUCK_SIZE elements into arr from the input file
 		arr := []int64{}
 
+		timeReadFile := model.NewTimer()
+		timeReadFile.Start()
 		for i := 0; i < common.CHUNK_SIZE; i++ {
 			element, err := readInt64(readFile)
 			if err != nil {
@@ -62,15 +62,21 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 			}
 			arr = append(arr, element)
 		}
+		total_time_read_file = total_time_read_file + timeReadFile.Stop()
 
+		time_sorting := model.NewTimer()
+		time_sorting.Start()
 		// Sort array using library
 		sort.Slice(arr, func(i, j int) bool {
 			return arr[i] < arr[j]
 		})
+		total_time_sorting = total_time_sorting + float64(time_sorting.Stop())
 
 		// Write the records to the appropriate scratch output file
 		// Can't assume that the loop runs to runSize
 		// Since the last run's length may be less than runSize
+		timeWriteFile := model.NewTimer()
+		timeWriteFile.Start()
 		for j := 0; j < len(arr); j++ {
 			var bin_buff bytes.Buffer
 			binary.Write(&bin_buff, binary.BigEndian, arr[j])
@@ -80,10 +86,14 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 				return nil, err
 			}
 		}
+		total_time_write_file = total_time_write_file + timeWriteFile.Stop()
 
 		nextOutputFile++
 	}
 
+	fmt.Println("Total time sorting: 	", total_time_sorting)
+	fmt.Println("Total time read file: 	", total_time_read_file)
+	fmt.Println("Total time write file: ", total_time_write_file)
 	// fmt.Println(nextOutputFile)
 	// Close input and output files
 	for i := 0; i < common.NUMBER_OF_CHUCKS_FILE; i++ {
@@ -121,6 +131,8 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 	}
 	defer out.Close()
 
+	time_create_min_heap := model.NewTimer()
+	time_create_min_heap.Start()
 	fmt.Println("===================================================================")
 	fmt.Println("Create Min Heap")
 	fmt.Println("===================================================================")
@@ -147,20 +159,28 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 		// Index of scratch output file
 		harr[i].I = i
 	}
-	// fmt.Println(harr)
+	fmt.Println("Time create min heap: ", time_create_min_heap.Stop())
+
 	// Create the heap
 	hp := model.NewMinHeap(harr[:], i)
 	count := 0
-	// fmt.Println(hp)
+	total_time_write_file := 0
+	time_merge := model.NewTimer()
+	time_merge.Start()
+
 	fmt.Println("===================================================================")
 	fmt.Println("Merge it")
 	fmt.Println("===================================================================")
 	// Now one by one get the minimum element from the min heap and replace it with the next element
 	// Run until all filled input files reach EOF
 	for count != i {
+
 		// Get the minimum element and store it in the output file
 		root := hp.GetMin()
+
+		time_write_file := model.NewTimer()
 		fmt.Fprintf(out, "%d\n", root.Element)
+		total_time_write_file = total_time_write_file + int(time_write_file.Stop())
 
 		// Find the next element that will replace the current root of the heap.
 		// The next element belongs to the same input file as the current min element.
@@ -187,20 +207,13 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 		// Replace root with the next element of the input file
 		hp.ReplaceMin(root)
 	}
+
+	fmt.Println("Total time write file: 	", total_time_write_file)
+	fmt.Println("Time merge file: 			", time_merge.Stop())
 	return nil
 }
 
-// OpenFile opens a file with the given name and mode
-func OpenFile(fileName, mode string) (*os.File, error) {
-	file, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, os.ModePerm)
-	if err != nil {
-		fmt.Println("Error opening file:", err)
-	}
-	return file, err
-}
-
 // External Merge Sort algorithm
-
 func ExternalMergeSort(inputFilePath, outputFilePath string) error {
 	time_create_chunks := model.NewTimer()
 	time_create_chunks.Start()
@@ -238,9 +251,7 @@ func ExternalMergeSort(inputFilePath, outputFilePath string) error {
 			return err
 		}
 	}
-
 	fmt.Println("Remove Chunks success, runtime: ", time_remove_chunks.Stop())
-
 	return nil
 }
 

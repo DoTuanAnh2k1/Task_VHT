@@ -16,7 +16,7 @@ func (t *Timer) Start() {
 	t.startTime = time.Now()
 }
 
-func (t *Timer) Stop() int64 {
+func (t *Timer) Stop() float64 {
 	runningTime := time.Since(t.startTime)
-	return int64(runningTime.Seconds())
+	return runningTime.Seconds()
 }
