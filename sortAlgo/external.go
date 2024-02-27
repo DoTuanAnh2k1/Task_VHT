@@ -75,16 +75,20 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 		// Write the records to the appropriate scratch output file
 		// Can't assume that the loop runs to runSize
 		// Since the last run's length may be less than runSize
+		data := []byte{}
 		timeWriteFile := model.NewTimer()
 		timeWriteFile.Start()
+
 		for j := 0; j < len(arr); j++ {
-			var bin_buff bytes.Buffer
-			binary.Write(&bin_buff, binary.BigEndian, arr[j])
-			_, err := out[nextOutputFile].Write(bin_buff.Bytes())
-			if err != nil {
-				fmt.Println("Error while write to binary file, err: ", err)
-				return nil, err
-			}
+			var binBuff bytes.Buffer
+			binary.Write(&binBuff, binary.BigEndian, arr[j])
+			data = append(data, binBuff.Bytes()...)
+		}
+
+		_, err := out[nextOutputFile].Write(data)
+		if err != nil {
+			fmt.Println("Error while write to binary file, err: ", err)
+			return nil, err
 		}
 		total_time_write_file = total_time_write_file + timeWriteFile.Stop()
 
@@ -164,7 +168,6 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 	// Create the heap
 	hp := model.NewMinHeap(harr[:], i)
 	count := 0
-	total_time_write_file := 0
 	time_merge := model.NewTimer()
 	time_merge.Start()
 
@@ -178,9 +181,7 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 		// Get the minimum element and store it in the output file
 		root := hp.GetMin()
 
-		time_write_file := model.NewTimer()
 		fmt.Fprintf(out, "%d\n", root.Element)
-		total_time_write_file = total_time_write_file + int(time_write_file.Stop())
 
 		// Find the next element that will replace the current root of the heap.
 		// The next element belongs to the same input file as the current min element.
@@ -208,7 +209,7 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 		hp.ReplaceMin(root)
 	}
 
-	fmt.Println("Total time write file: 	", total_time_write_file)
+	// fmt.Println("Total time write file: 	", total_time_write_file)
 	fmt.Println("Time merge file: 			", time_merge.Stop())
 	return nil
 }
