@@ -14,25 +14,29 @@ const (
 	PATH_TEMP = "data/temp"
 
 	// Max value in file
-	MAXVALUE = 10_000
+	MAXVALUE = 1_000_000_000
 
 	// Min value in file
 	MINVALUE = 1
 
 	// Number of num in file
-	// NUMBER_OF_NUMBER = 4_000_000_000
-	NUMBER_OF_NUMBER = 1_000
+	NUMBER_OF_NUMBER = 1_000_000_000
+	// NUMBER_OF_NUMBER = 1_000
 
 	// Number of goroutine running
 	NUMBER_OF_GOROUTINE = 50
 
 	// Number of num in one file chunk
-	// CHUNK_SIZE = 1_000_000
-	CHUNK_SIZE = 600
+	CHUNK_SIZE = 1_000_000
+	// CHUNK_SIZE = 600
 
 	// Number of chunks
 	NUMBER_OF_CHUCKS_FILE = NUMBER_OF_NUMBER / CHUNK_SIZE
 
 	// Int max in Golang
 	MAX_INT = ^uint(0) >> 1
+
+	BYTES_BUFF_FILE = 2048
+
+	COUNT_BUFFER = 50
 )

@@ -136,14 +136,15 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 	}
 	defer out.Close()
 
+	writer := bufio.NewWriter(out)
 	time_create_pq := model.NewTimer()
 	time_create_pq.Start()
 	fmt.Println("===================================================================")
-	fmt.Println("Create Min Heap")
+	fmt.Println("Create Priority Queue")
 	fmt.Println("===================================================================")
 
 	pq := make(model.PriorityQueue, 0)
-	data := make([]byte, 4096)
+	data := make([]byte, common.BYTES_BUFF_FILE)
 	for i := 0; i < common.NUMBER_OF_CHUCKS_FILE; i++ {
 		numberData, err := in[i].Read(data)
 		if err != nil {
@@ -151,9 +152,9 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 			return err
 		}
 
-		for i := 0; i < numberData; i = i + 8 {
+		for j := 0; j < numberData; j = j + 8 {
 			var element int64
-			buffer := bytes.NewBuffer(data[i : i+8])
+			buffer := bytes.NewBuffer(data[j : j+8])
 			err = binary.Read(buffer, binary.BigEndian, &element)
 			if err != nil {
 				fmt.Println("Read from buffer fail, err: ", err)
@@ -165,7 +166,7 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 			})
 		}
 
-		if numberData < 4096 {
+		if numberData < common.BYTES_BUFF_FILE {
 			in[i].Close()
 		}
 	}
@@ -182,14 +183,15 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 		bufferAnswer = bufferAnswer + strconv.FormatInt(item.Priority, 10) + "\n"
 		countBuffer++
 
-		if countBuffer == 1000 {
-			fmt.Fprint(out, bufferAnswer)
+		if countBuffer == common.COUNT_BUFFER {
+			// fmt.Fprint(out, bufferAnswer)
+			writer.WriteString(bufferAnswer)
 			bufferAnswer = ""
 			countBuffer = 0
 		}
 
 		checkRemain[item.FileId]++
-		if checkRemain[item.FileId] == 512 {
+		if checkRemain[item.FileId] == common.BYTES_BUFF_FILE/8 {
 			checkRemain[item.FileId] = 0
 
 			numberData, err := in[item.FileId].Read(data)
@@ -207,19 +209,20 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 					return err
 				}
 				heap.Push(&pq, &model.Item{
-					FileId:   i,
+					FileId:   item.FileId,
 					Priority: element,
 				})
 			}
 
-			if numberData < 4096 {
+			if numberData < common.BYTES_BUFF_FILE {
 				in[item.FileId].Close()
 			}
 		}
 	}
 
 	if len(bufferAnswer) != 0 {
-		fmt.Fprint(out, bufferAnswer)
+		// fmt.Fprint(out, bufferAnswer)
+		writer.WriteString(bufferAnswer)
 	}
 
 	fmt.Println("Time merge file: 			", time_merge_chunks.Stop())
