@@ -3,6 +3,7 @@ package sortAlgo
 import (
 	"bufio"
 	"bytes"
+	"container/heap"
 	"encoding/binary"
 	"fmt"
 	"os"
@@ -135,82 +136,93 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 	}
 	defer out.Close()
 
-	time_create_min_heap := model.NewTimer()
-	time_create_min_heap.Start()
+	time_create_pq := model.NewTimer()
+	time_create_pq.Start()
 	fmt.Println("===================================================================")
 	fmt.Println("Create Min Heap")
 	fmt.Println("===================================================================")
-	// Create a min heap with k heap nodes
-	harr := make([]model.MinHeapNode, common.NUMBER_OF_CHUCKS_FILE)
-	i := 0
-	for ; i < common.NUMBER_OF_CHUCKS_FILE; i++ {
-		var element int64
-		data := make([]byte, 8)
-		_, err := in[i].Read(data)
+
+	pq := make(model.PriorityQueue, 0)
+	data := make([]byte, 4096)
+	for i := 0; i < common.NUMBER_OF_CHUCKS_FILE; i++ {
+		numberData, err := in[i].Read(data)
 		if err != nil {
 			fmt.Println("Read From binary file fail, err: ", err)
 			return err
 		}
 
-		buffer := bytes.NewBuffer(data)
-		err = binary.Read(buffer, binary.BigEndian, &element)
-		if err != nil {
-			fmt.Println("Read binary fail, err: ", err)
-			return err
+		for i := 0; i < numberData; i = i + 8 {
+			var element int64
+			buffer := bytes.NewBuffer(data[i : i+8])
+			err = binary.Read(buffer, binary.BigEndian, &element)
+			if err != nil {
+				fmt.Println("Read from buffer fail, err: ", err)
+				return err
+			}
+			heap.Push(&pq, &model.Item{
+				FileId:   i,
+				Priority: element,
+			})
 		}
-		// _, err := fmt.Fscanf(in[i], "%d", &harr[i].Element)
-		harr[i].Element = element
-		// Index of scratch output file
-		harr[i].I = i
+
+		if numberData < 4096 {
+			in[i].Close()
+		}
 	}
-	fmt.Println("Time create min heap: ", time_create_min_heap.Stop())
+	fmt.Println("Time init pq: ", time_create_pq.Stop())
 
-	// Create the heap
-	hp := model.NewMinHeap(harr[:], i)
-	count := 0
-	time_merge := model.NewTimer()
-	time_merge.Start()
+	time_merge_chunks := model.NewTimer()
+	time_merge_chunks.Start()
+	checkRemain := make([]int, common.NUMBER_OF_CHUCKS_FILE)
+	bufferAnswer := ""
+	countBuffer := 0
 
-	fmt.Println("===================================================================")
-	fmt.Println("Merge it")
-	fmt.Println("===================================================================")
-	// Now one by one get the minimum element from the min heap and replace it with the next element
-	// Run until all filled input files reach EOF
-	for count != i {
+	for pq.Len() > 0 {
+		item := heap.Pop(&pq).(*model.Item)
+		bufferAnswer = bufferAnswer + strconv.FormatInt(item.Priority, 10) + "\n"
+		countBuffer++
 
-		// Get the minimum element and store it in the output file
-		root := hp.GetMin()
-
-		fmt.Fprintf(out, "%d\n", root.Element)
-
-		// Find the next element that will replace the current root of the heap.
-		// The next element belongs to the same input file as the current min element.
-		var element int64
-		data := make([]byte, 8)
-		_, err := in[root.I].Read(data)
-		if err != nil {
-			root.Element = int64(common.MAX_INT)
-			count++
+		if countBuffer == 1000 {
+			fmt.Fprint(out, bufferAnswer)
+			bufferAnswer = ""
+			countBuffer = 0
 		}
 
-		buffer := bytes.NewBuffer(data)
-		err = binary.Read(buffer, binary.BigEndian, &element)
-		if err != nil {
-			fmt.Println("Read binary fail, err: ", err)
-			return err
+		checkRemain[item.FileId]++
+		if checkRemain[item.FileId] == 512 {
+			checkRemain[item.FileId] = 0
+
+			numberData, err := in[item.FileId].Read(data)
+			if err != nil {
+				fmt.Println("Read From binary file fail, err: ", err)
+				in[item.FileId].Close()
+			}
+
+			for i := 0; i < numberData; i = i + 8 {
+				var element int64
+				buffer := bytes.NewBuffer(data[i : i+8])
+				err = binary.Read(buffer, binary.BigEndian, &element)
+				if err != nil {
+					fmt.Println("Read from buffer fail, err: ", err)
+					return err
+				}
+				heap.Push(&pq, &model.Item{
+					FileId:   i,
+					Priority: element,
+				})
+			}
+
+			if numberData < 4096 {
+				in[item.FileId].Close()
+			}
 		}
-
-		// if _, err := fmt.Fscanf(in[root.I], "%d", &root.Element); err != nil {
-		// 	root.Element = int64(common.MAX_INT) // INT_MAX
-		// 	count++
-		// }
-
-		// Replace root with the next element of the input file
-		hp.ReplaceMin(root)
 	}
 
-	// fmt.Println("Total time write file: 	", total_time_write_file)
-	fmt.Println("Time merge file: 			", time_merge.Stop())
+	if len(bufferAnswer) != 0 {
+		fmt.Fprint(out, bufferAnswer)
+	}
+
+	fmt.Println("Time merge file: 			", time_merge_chunks.Stop())
 	return nil
 }
 

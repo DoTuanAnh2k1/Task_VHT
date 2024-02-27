@@ -14,7 +14,7 @@ func main() {
 	// Create Data Input
 
 	// f := model.NewFileManager()
-	if false {
+	if true {
 		err := model.CreateData(
 			common.PATH_INPUT,
 			common.MINVALUE,
