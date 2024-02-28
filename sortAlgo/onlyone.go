@@ -1,5 +1,6 @@
 package sortAlgo
 
+// MergeSort algo
 func MergeSort(arr []int64) []int64 {
 	if len(arr) <= 1 {
 		return arr

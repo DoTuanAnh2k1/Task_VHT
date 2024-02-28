@@ -14,13 +14,13 @@ const (
 	PATH_TEMP = "data/temp"
 
 	// Max value in file
-	MAXVALUE = 1_000_000_000
+	MAXVALUE = 4_000_000_000
 
 	// Min value in file
 	MINVALUE = 1
 
 	// Number of num in file
-	NUMBER_OF_NUMBER = 1_000_000_000
+	NUMBER_OF_NUMBER = 4_000_000_000
 	// NUMBER_OF_NUMBER = 1_000
 
 	// Number of goroutine running
@@ -36,7 +36,9 @@ const (
 	// Int max in Golang
 	MAX_INT = ^uint(0) >> 1
 
+	// Buffer byte per file
 	BYTES_BUFF_FILE = 2048
 
+	// number of element in buffer to write final output file
 	COUNT_BUFFER = 50
 )

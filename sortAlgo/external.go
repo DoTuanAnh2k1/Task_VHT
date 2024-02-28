@@ -9,18 +9,18 @@ import (
 	"os"
 	"sort"
 	"strconv"
-	"strings"
 
 	"main.go/common"
+	"main.go/helper"
 	"main.go/model"
 )
 
 func CreateChunks(inputFilePath string) ([]*os.File, error) {
 	// For big input file
-	in := openFile(inputFilePath, "r")
+	in := helper.OpenFile(inputFilePath, "r")
 	defer in.Close()
 
-	// Output scratch files
+	// Output chunks files
 	var out []*os.File
 	for i := 0; i < common.NUMBER_OF_CHUCKS_FILE; i++ {
 		// Convert i to string
@@ -28,13 +28,12 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 		path := common.PATH_TEMP + "/chunk_" + fileNameId + ".bin"
 
 		// Open output files in write mode.
-		file := openFile(path, "w")
+		file := helper.OpenFile(path, "w")
 		defer file.Close()
 		out = append(out, file)
 	}
 
-	// Allocate a dynamic array large enough to accommodate runs of size common.CHUCK_SIZE
-
+	// Read from input file
 	moreInput := true
 	nextOutputFile := 0
 	readFile := bufio.NewReader(in)
@@ -43,16 +42,18 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 	total_time_write_file := float64(0)
 
 	for moreInput && nextOutputFile != common.NUMBER_OF_CHUCKS_FILE {
+		// Log process
 		if nextOutputFile%500 == 0 {
 			fmt.Println("Working on file chunk id: ", nextOutputFile)
 		}
-		// Write common.CHUCK_SIZE elements into arr from the input file
+		// Create an array to store and sort number in input file
 		arr := []int64{}
 
 		timeReadFile := model.NewTimer()
 		timeReadFile.Start()
+		// Write common.CHUCK_SIZE elements into arr from the input file
 		for i := 0; i < common.CHUNK_SIZE; i++ {
-			element, err := readInt64(readFile)
+			element, err := helper.ReadInt64(readFile)
 			if err != nil {
 				fmt.Println("Read to create chunks fail, err: ", err)
 				moreInput = false
@@ -65,17 +66,15 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 		}
 		total_time_read_file = total_time_read_file + timeReadFile.Stop()
 
+		// Sort array using library
 		time_sorting := model.NewTimer()
 		time_sorting.Start()
-		// Sort array using library
 		sort.Slice(arr, func(i, j int) bool {
 			return arr[i] < arr[j]
 		})
 		total_time_sorting = total_time_sorting + float64(time_sorting.Stop())
 
-		// Write the records to the appropriate scratch output file
-		// Can't assume that the loop runs to runSize
-		// Since the last run's length may be less than runSize
+		// Write array to buffer and from buffer to chunk file
 		data := []byte{}
 		timeWriteFile := model.NewTimer()
 		timeWriteFile.Start()
@@ -99,24 +98,16 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 	fmt.Println("Total time sorting: 	", total_time_sorting)
 	fmt.Println("Total time read file: 	", total_time_read_file)
 	fmt.Println("Total time write file: ", total_time_write_file)
-	// fmt.Println(nextOutputFile)
-	// Close input and output files
+
+	// Close chunks files
 	for i := 0; i < common.NUMBER_OF_CHUCKS_FILE; i++ {
 		out[i].Close()
 	}
 	return out, nil
 }
 
-// openFile opens a file with the given name and mode
-func openFile(fileName, mode string) *os.File {
-	file, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, os.ModePerm)
-	if err != nil {
-		fmt.Println("Error opening file:", err)
-	}
-	return file
-}
-
 func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
+	// Open chunks files
 	var in []*os.File
 	for _, fileOut := range out_createChunks {
 		file, err := os.Open(fileOut.Name())
@@ -128,7 +119,7 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 		in = append(in, file)
 	}
 
-	// Open output file
+	// Create and open output file
 	out, err := os.Create(outputFilePath)
 	if err != nil {
 		fmt.Println("Error creating output file:", err)
@@ -136,6 +127,9 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 	}
 	defer out.Close()
 
+	// Create Priority Queue and
+	// pushing common.BYTES_BUFF_FILE / 8 numbers
+	// per chunk files to PQ
 	writer := bufio.NewWriter(out)
 	time_create_pq := model.NewTimer()
 	time_create_pq.Start()
@@ -166,6 +160,9 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 			})
 		}
 
+		// Case that if number of byte read from file
+		// less than byte buffer then close the file
+		// because file have nothing left
 		if numberData < common.BYTES_BUFF_FILE {
 			in[i].Close()
 		}
@@ -178,6 +175,11 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 	bufferAnswer := ""
 	countBuffer := 0
 
+	// While len PQ > 0, push the top of queue.
+	// If that element of file remain == 0 then push more
+	// number of that file in queue.
+	// When count buffer == common.COUNT_BUFFER then write bufferAns
+	// to output file and restart the count.
 	for pq.Len() > 0 {
 		item := heap.Pop(&pq).(*model.Item)
 		bufferAnswer = bufferAnswer + strconv.FormatInt(item.Priority, 10) + "\n"
@@ -220,8 +222,9 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 		}
 	}
 
+	// In case that pq len empty but the buffer Answer
+	// remain haven't write to output file
 	if len(bufferAnswer) != 0 {
-		// fmt.Fprint(out, bufferAnswer)
 		writer.WriteString(bufferAnswer)
 	}
 
@@ -231,6 +234,7 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 
 // External Merge Sort algorithm
 func ExternalMergeSort(inputFilePath, outputFilePath string) error {
+	// Create chunks phrase
 	time_create_chunks := model.NewTimer()
 	time_create_chunks.Start()
 	fmt.Println("===================================================================")
@@ -243,6 +247,7 @@ func ExternalMergeSort(inputFilePath, outputFilePath string) error {
 	}
 	fmt.Println("Create Chunks success, runtime: ", time_create_chunks.Stop())
 
+	// Merge chunks phrase
 	time_merge_chunks := model.NewTimer()
 	time_merge_chunks.Start()
 	fmt.Println("===================================================================")
@@ -255,6 +260,7 @@ func ExternalMergeSort(inputFilePath, outputFilePath string) error {
 	}
 	fmt.Println("Merge Chunks success, runtime: ", time_merge_chunks.Stop())
 
+	// Remove chunks
 	time_remove_chunks := model.NewTimer()
 	time_remove_chunks.Start()
 	fmt.Println("===================================================================")
@@ -269,19 +275,4 @@ func ExternalMergeSort(inputFilePath, outputFilePath string) error {
 	}
 	fmt.Println("Remove Chunks success, runtime: ", time_remove_chunks.Stop())
 	return nil
-}
-
-func readInt64(in *bufio.Reader) (int64, error) {
-	nStr, err := in.ReadString('\n')
-	if err != nil {
-		return 0, err
-	}
-	nStr = strings.ReplaceAll(nStr, "\r", "")
-	nStr = strings.ReplaceAll(nStr, "\n", "")
-	n, err := strconv.ParseInt(nStr, 10, 64)
-	if err != nil {
-		fmt.Println("Error reading file, error: ", err)
-		return 0, err
-	}
-	return n, nil
 }
