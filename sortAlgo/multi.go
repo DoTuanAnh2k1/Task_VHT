@@ -2,6 +2,7 @@ package sortAlgo
 
 import "sync"
 
+// Goroutine for sorting an array
 func SortingMulti(arr []int64, wg *sync.WaitGroup) {
 	MergeSortMulti(arr)
 	wg.Done()
