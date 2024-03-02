@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-	"strconv"
 	"time"
+
+	"main.go/common"
+	"main.go/helper"
 )
 
 // File Manager: Read, Write
@@ -25,17 +27,17 @@ func (fm *FileManager) ReadFromFile(filePath string) ([]int64, error) {
 	defer file.Close()
 
 	var numbers []int64
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		num, err := strconv.ParseInt(scanner.Text(), 10, 64)
+	readFile := bufio.NewReader(file)
+	for i := 0; i < common.NUMBER_OF_NUMBER; i++ {
+		element, err := helper.ReadInt64(readFile)
 		if err != nil {
-			return nil, err
+			fmt.Println("Cant readfrom file, err: ", err)
+			return numbers, err
 		}
-		numbers = append(numbers, num)
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
+		if element == 0 {
+			break
+		}
+		numbers = append(numbers, element)
 	}
 
 	return numbers, nil

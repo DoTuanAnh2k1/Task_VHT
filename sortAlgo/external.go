@@ -43,7 +43,7 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 
 	for moreInput && nextOutputFile != common.NUMBER_OF_CHUCKS_FILE {
 		// Log process
-		if nextOutputFile%500 == 0 {
+		if nextOutputFile%(common.NUMBER_OF_CHUCKS_FILE/10) == 0 {
 			fmt.Println("Working on file chunk id: ", nextOutputFile)
 		}
 		// Create an array to store and sort number in input file

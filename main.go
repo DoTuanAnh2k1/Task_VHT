@@ -13,8 +13,8 @@ func main() {
 	var wg sync.WaitGroup
 	// Create Data Input
 
-	// f := model.NewFileManager()
-	flag := false
+	f := model.NewFileManager()
+	flag := true
 	if flag {
 		err := model.CreateData(
 			common.PATH_INPUT,
@@ -28,21 +28,24 @@ func main() {
 		}
 	}
 
-	// arrayInPut, err := f.ReadFromFile(common.PATH_INPUT)
-	// if err != nil {
-	// 	fmt.Println("Cannot Read Input File: ", err.Error())
-	// 	return
-	// }
+	arrayInPut, err := f.ReadFromFile(common.PATH_INPUT)
+	if err != nil {
+		fmt.Println("Cannot Read Input File: ", err.Error())
+		return
+	}
 
 	// Add goroutine running merge sort algorithm without separate array
-	// wg.Add(1)
-	// go worker.WorkerMergeSortOnly(arrayInPut[:], &wg)
+	wg.Add(1)
+	go worker.WorkerMergeSortOnly(arrayInPut[:], &wg)
 
 	// Add goroutine running merge sort algorithm with separate array
-	// wg.Add(1)
-	// go worker.WorkerMergeSortMulti(arrayInPut[:], &wg)
+	wg.Add(1)
+	go worker.WorkerMergeSortMulti(arrayInPut[:], &wg)
 
 	wg.Add(1)
-	worker.WorkerMergeSortExternal(&wg)
+	go worker.WorkerLibSort(arrayInPut[:], &wg)
+
+	wg.Add(1)
+	go worker.WorkerMergeSortExternal(&wg)
 	wg.Wait()
 }
