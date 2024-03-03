@@ -7,8 +7,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
-	"sort"
 	"strconv"
+	"sync"
 
 	"main.go/common"
 	"main.go/helper"
@@ -69,9 +69,18 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 		// Sort array using library
 		time_sorting := model.NewTimer()
 		time_sorting.Start()
-		sort.Slice(arr, func(i, j int) bool {
-			return arr[i] < arr[j]
-		})
+		arrSep := helper.SeparateArray(common.NUMBER_OF_GOROUTINE, arr)
+		var wgChild sync.WaitGroup
+		for i := 0; i < common.NUMBER_OF_GOROUTINE; i++ {
+			wgChild.Add(1)
+			go SortingMulti(arrSep[i], &wgChild)
+		}
+
+		wgChild.Wait()
+		arr = MergeMultiArray(arrSep)
+		// sort.Slice(arr, func(i, j int) bool {
+		// 	return arr[i] < arr[j]
+		// })
 		total_time_sorting = total_time_sorting + float64(time_sorting.Stop())
 
 		// Write array to buffer and from buffer to chunk file
@@ -187,7 +196,16 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 
 		if countBuffer == common.COUNT_BUFFER {
 			// fmt.Fprint(out, bufferAnswer)
-			writer.WriteString(bufferAnswer)
+			_, err := writer.WriteString(bufferAnswer)
+			if err != nil {
+				fmt.Println("Error writing to file:", err)
+				return err
+			}
+			err = writer.Flush()
+			if err != nil {
+				fmt.Println("Error flushing buffer:", err)
+				return err
+			}
 			bufferAnswer = ""
 			countBuffer = 0
 		}
@@ -225,7 +243,16 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 	// In case that pq len empty but the buffer Answer
 	// remain haven't write to output file
 	if len(bufferAnswer) != 0 {
-		writer.WriteString(bufferAnswer)
+		_, err := writer.WriteString(bufferAnswer)
+		if err != nil {
+			fmt.Println("Error writing to file:", err)
+			return err
+		}
+		err = writer.Flush()
+		if err != nil {
+			fmt.Println("Error flushing buffer:", err)
+			return err
+		}
 	}
 
 	fmt.Println("Time merge file: 			", time_merge_chunks.Stop())

@@ -1,23 +1,34 @@
 package validate
 
 import (
+	"bufio"
 	"fmt"
 
-	"main.go/model"
+	"main.go/common"
+	"main.go/helper"
 )
 
 func Validate(filePath string) (bool, error) {
-	f := model.NewFileManager()
-	array, err := f.ReadFromFile(filePath)
+	ouputFile := helper.OpenFile(filePath, "r")
+	readFile := bufio.NewReader(ouputFile)
+	tmp, err := helper.ReadInt64(readFile)
 	if err != nil {
-		fmt.Println("Validate, Cannot Read File: ", err)
+		fmt.Println("Read to validate file fail, error: ", err)
 		return false, err
 	}
-
-	for i := 0; i < len(array)-1; i++ {
-		if array[i] > array[i+1] {
+	for i := 0; i < common.NUMBER_OF_NUMBER-1; i++ {
+		element, err := helper.ReadInt64(readFile)
+		if err != nil {
+			fmt.Println("Read to validate file fail, error: ", err)
+			return false, err
+		}
+		if element == 0 {
+			break
+		}
+		if tmp > element {
 			return false, nil
 		}
+		tmp = element
 	}
 
 	return true, nil

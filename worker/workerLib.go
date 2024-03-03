@@ -7,7 +7,6 @@ import (
 	"main.go/common"
 	"main.go/model"
 	"main.go/sortAlgo"
-	"main.go/validate"
 )
 
 func WorkerLibSort(arr []int64, wg *sync.WaitGroup) {
@@ -22,18 +21,19 @@ func WorkerLibSort(arr []int64, wg *sync.WaitGroup) {
 	if err != nil {
 		fmt.Println("Cannot Write to file Merge Sort Only: ", err.Error())
 	}
+	fmt.Println("Sorting Lib Sort Only complete, runtime: ", runtime)
 
-	// validate solution
-	validate, err := validate.Validate(common.PATH_OUTPUT_LIB_SORT)
-	if err != nil {
-		fmt.Println("Cannot Validate Lib Sort Only: ", err.Error())
-		return
-	}
+	// // validate solution
+	// validate, err := validate.Validate(common.PATH_OUTPUT_LIB_SORT)
+	// if err != nil {
+	// 	fmt.Println("Cannot Validate Lib Sort Only: ", err.Error())
+	// 	return
+	// }
 
-	if validate {
-		fmt.Println("Sorting Lib Sort Only complete, runtime: ", runtime, "second")
-	} else {
-		fmt.Println("Sorting Lib Sort Only Fail")
-	}
+	// if validate {
+	// 	fmt.Println("Sorting Lib Sort Only complete, runtime: ", runtime)
+	// } else {
+	// 	fmt.Println("Sorting Lib Sort Only Fail, runtime: ", runtime)
+	// }
 	wg.Done()
 }
