@@ -146,6 +146,9 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 	fmt.Println("Create Priority Queue")
 	fmt.Println("===================================================================")
 
+	//* Create object pool here
+	poolObj := model.NewObjectPool(common.POOL_SIZE)
+
 	pq := make(model.PriorityQueue, 0)
 	data := make([]byte, common.BYTES_BUFF_FILE)
 	for i := 0; i < common.NUMBER_OF_CHUCKS_FILE; i++ {
@@ -163,10 +166,16 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 				fmt.Println("Read from buffer fail, err: ", err)
 				return err
 			}
-			heap.Push(&pq, &model.Item{
-				FileId:   i,
-				Priority: element,
-			})
+
+			acquire := poolObj.Acquire()
+			acquire.FileId = i
+			acquire.Priority = element
+			heap.Push(&pq, acquire)
+
+			//heap.Push(&pq, &model.Item{
+			//	FileId:   i,
+			//	Priority: element,
+			//})
 		}
 
 		// Case that if number of byte read from file
@@ -228,20 +237,28 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 					fmt.Println("Read from buffer fail, err: ", err)
 					return err
 				}
-				heap.Push(&pq, &model.Item{
-					FileId:   item.FileId,
-					Priority: element,
-				})
+				// TODO: Change to using object pool
+				newItem := poolObj.Acquire()
+				newItem.FileId = item.FileId
+				newItem.Priority = element
+
+				heap.Push(&pq, newItem)
+				//heap.Push(&pq, &model.Item{
+				//	FileId:   item.FileId,
+				//	Priority: element,
+				//})
 			}
 
 			if numberData < common.BYTES_BUFF_FILE {
 				in[item.FileId].Close()
 			}
 		}
+
+		poolObj.Release(item)
 	}
 
 	// In case that pq len empty but the buffer Answer
-	// remain haven't write to output file
+	// remain haven't been written to output file
 	if len(bufferAnswer) != 0 {
 		_, err := writer.WriteString(bufferAnswer)
 		if err != nil {
