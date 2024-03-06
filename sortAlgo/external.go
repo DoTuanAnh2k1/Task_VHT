@@ -37,9 +37,9 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 	moreInput := true
 	nextOutputFile := 0
 	readFile := bufio.NewReader(in)
-	total_time_sorting := float64(0)
-	total_time_read_file := float64(0)
-	total_time_write_file := float64(0)
+	totalTimeSorting := float64(0)
+	totalTimeReadFile := float64(0)
+	totalTimeWriteFile := float64(0)
 
 	for moreInput && nextOutputFile != common.NUMBER_OF_CHUCKS_FILE {
 		// Log process
@@ -64,7 +64,7 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 			}
 			arr = append(arr, element)
 		}
-		total_time_read_file = total_time_read_file + timeReadFile.Stop()
+		totalTimeReadFile = totalTimeReadFile + timeReadFile.Stop()
 
 		// Sort array using library
 		time_sorting := model.NewTimer()
@@ -81,7 +81,7 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 		// sort.Slice(arr, func(i, j int) bool {
 		// 	return arr[i] < arr[j]
 		// })
-		total_time_sorting = total_time_sorting + float64(time_sorting.Stop())
+		totalTimeSorting = totalTimeSorting + float64(time_sorting.Stop())
 
 		// Write array to buffer and from buffer to chunk file
 		data := []byte{}
@@ -99,14 +99,14 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 			fmt.Println("Error while write to binary file, err: ", err)
 			return nil, err
 		}
-		total_time_write_file = total_time_write_file + timeWriteFile.Stop()
+		totalTimeWriteFile = totalTimeWriteFile + timeWriteFile.Stop()
 
 		nextOutputFile++
 	}
 
-	fmt.Println("Total time sorting: 	", total_time_sorting)
-	fmt.Println("Total time read file: 	", total_time_read_file)
-	fmt.Println("Total time write file: ", total_time_write_file)
+	fmt.Println("Total time sorting: 	", totalTimeSorting)
+	fmt.Println("Total time read file: 	", totalTimeReadFile)
+	fmt.Println("Total time write file: ", totalTimeWriteFile)
 
 	// Close chunks files
 	for i := 0; i < common.NUMBER_OF_CHUCKS_FILE; i++ {
@@ -192,13 +192,16 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 	checkRemain := make([]int, common.NUMBER_OF_CHUCKS_FILE)
 	bufferAnswer := ""
 	countBuffer := 0
-
+	countNumberLog := 0
 	// While len PQ > 0, push the top of queue.
 	// If that element of file remain == 0 then push more
 	// number of that file in queue.
 	// When count buffer == common.COUNT_BUFFER then write bufferAns
 	// to output file and restart the count.
 	for pq.Len() > 0 {
+		if countNumberLog%(common.NUMBER_OF_NUMBER/10) == 0 {
+			fmt.Println("Working process, numbers: ", countNumberLog)
+		}
 		item := heap.Pop(&pq).(*model.Item)
 		bufferAnswer = bufferAnswer + strconv.FormatInt(item.Priority, 10) + "\n"
 		countBuffer++
