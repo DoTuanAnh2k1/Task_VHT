@@ -7,13 +7,40 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
-	"sort"
 	"strconv"
+	"sync"
 
 	"main.go/common"
 	"main.go/helper"
 	"main.go/model"
 )
+
+func workerSort(arr []int64, outputFile *os.File, wg *sync.WaitGroup) error {
+	arrSep := helper.SeparateArray(common.NUMBER_OF_GOROUTINE, arr)
+	var wgChild sync.WaitGroup
+	for i := 0; i < common.NUMBER_OF_GOROUTINE; i++ {
+		wgChild.Add(1)
+		go SortingMulti(arrSep[i], &wgChild)
+	}
+	wgChild.Wait()
+	arr = MergeMultiArray(arrSep)
+
+	data := []byte{}
+
+	for j := 0; j < len(arr); j++ {
+		var binBuff bytes.Buffer
+		binary.Write(&binBuff, binary.BigEndian, arr[j])
+		data = append(data, binBuff.Bytes()...)
+	}
+	_, err := outputFile.Write(data)
+	if err != nil {
+		fmt.Println("Error while write to binary file, err: ", err)
+		return err
+	}
+	outputFile.Close()
+	wg.Done()
+	return nil
+}
 
 func CreateChunks(inputFilePath string) ([]*os.File, error) {
 	// For big input file
@@ -35,18 +62,17 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 
 	// Read from input file
 	moreInput := true
-	nextOutputFile := 0
+	nextOutputFile := -1
 	readFile := bufio.NewReader(in)
-	total_time_sorting := float64(0)
-	total_time_read_file := float64(0)
-	total_time_write_file := float64(0)
+	totalTimeReadFile := float64(0)
+	var wgSort sync.WaitGroup
 
 	for moreInput && nextOutputFile != common.NUMBER_OF_CHUCKS_FILE {
-		// Log process
-		if nextOutputFile%(common.NUMBER_OF_CHUCKS_FILE/10) == 0 {
-			fmt.Println("Working on file chunk id: ", nextOutputFile)
-		}
 		// Create an array to store and sort number in input file
+		nextOutputFile++
+		if nextOutputFile == common.NUMBER_OF_CHUCKS_FILE {
+			break
+		}
 		arr := []int64{}
 
 		timeReadFile := model.NewTimer()
@@ -64,45 +90,13 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 			}
 			arr = append(arr, element)
 		}
-		total_time_read_file = total_time_read_file + timeReadFile.Stop()
-
-		// Sort array using library
-		time_sorting := model.NewTimer()
-		time_sorting.Start()
-		sort.Slice(arr, func(i, j int) bool {
-			return arr[i] < arr[j]
-		})
-		total_time_sorting = total_time_sorting + float64(time_sorting.Stop())
-
-		// Write array to buffer and from buffer to chunk file
-		data := []byte{}
-		timeWriteFile := model.NewTimer()
-		timeWriteFile.Start()
-
-		for j := 0; j < len(arr); j++ {
-			var binBuff bytes.Buffer
-			binary.Write(&binBuff, binary.BigEndian, arr[j])
-			data = append(data, binBuff.Bytes()...)
-		}
-
-		_, err := out[nextOutputFile].Write(data)
-		if err != nil {
-			fmt.Println("Error while write to binary file, err: ", err)
-			return nil, err
-		}
-		total_time_write_file = total_time_write_file + timeWriteFile.Stop()
-
-		nextOutputFile++
+		totalTimeReadFile = totalTimeReadFile + timeReadFile.Stop()
+		wgSort.Add(1)
+		go workerSort(arr, out[nextOutputFile], &wgSort)
 	}
+	wgSort.Wait()
 
-	fmt.Println("Total time sorting: 	", total_time_sorting)
-	fmt.Println("Total time read file: 	", total_time_read_file)
-	fmt.Println("Total time write file: ", total_time_write_file)
-
-	// Close chunks files
-	for i := 0; i < common.NUMBER_OF_CHUCKS_FILE; i++ {
-		out[i].Close()
-	}
+	fmt.Println("Total time read file: 	", totalTimeReadFile)
 	return out, nil
 }
 
@@ -137,6 +131,9 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 	fmt.Println("Create Priority Queue")
 	fmt.Println("===================================================================")
 
+	//* Create object pool here
+	poolObj := model.NewObjectPool(common.POOL_SIZE)
+
 	pq := make(model.PriorityQueue, 0)
 	data := make([]byte, common.BYTES_BUFF_FILE)
 	for i := 0; i < common.NUMBER_OF_CHUCKS_FILE; i++ {
@@ -154,10 +151,16 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 				fmt.Println("Read from buffer fail, err: ", err)
 				return err
 			}
-			heap.Push(&pq, &model.Item{
-				FileId:   i,
-				Priority: element,
-			})
+
+			acquire := poolObj.Acquire()
+			acquire.FileId = i
+			acquire.Priority = element
+			heap.Push(&pq, acquire)
+
+			//heap.Push(&pq, &model.Item{
+			//	FileId:   i,
+			//	Priority: element,
+			//})
 		}
 
 		// Case that if number of byte read from file
@@ -187,7 +190,16 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 
 		if countBuffer == common.COUNT_BUFFER {
 			// fmt.Fprint(out, bufferAnswer)
-			writer.WriteString(bufferAnswer)
+			_, err := writer.WriteString(bufferAnswer)
+			if err != nil {
+				fmt.Println("Error writing to file:", err)
+				return err
+			}
+			err = writer.Flush()
+			if err != nil {
+				fmt.Println("Error flushing buffer:", err)
+				return err
+			}
 			bufferAnswer = ""
 			countBuffer = 0
 		}
@@ -210,22 +222,39 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 					fmt.Println("Read from buffer fail, err: ", err)
 					return err
 				}
-				heap.Push(&pq, &model.Item{
-					FileId:   item.FileId,
-					Priority: element,
-				})
+
+				newItem := poolObj.Acquire()
+				newItem.FileId = item.FileId
+				newItem.Priority = element
+
+				heap.Push(&pq, newItem)
+				//heap.Push(&pq, &model.Item{
+				//	FileId:   item.FileId,
+				//	Priority: element,
+				//})
 			}
 
 			if numberData < common.BYTES_BUFF_FILE {
 				in[item.FileId].Close()
 			}
 		}
+
+		poolObj.Release(item)
 	}
 
 	// In case that pq len empty but the buffer Answer
-	// remain haven't write to output file
+	// remain haven't been written to output file
 	if len(bufferAnswer) != 0 {
-		writer.WriteString(bufferAnswer)
+		_, err := writer.WriteString(bufferAnswer)
+		if err != nil {
+			fmt.Println("Error writing to file:", err)
+			return err
+		}
+		err = writer.Flush()
+		if err != nil {
+			fmt.Println("Error flushing buffer:", err)
+			return err
+		}
 	}
 
 	fmt.Println("Time merge file: 			", time_merge_chunks.Stop())

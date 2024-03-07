@@ -20,7 +20,7 @@ func WorkerMergeSortExternal(wg *sync.WaitGroup) {
 		return
 	}
 	runtime := t.Stop()
-	fmt.Println("Sorting Merge Sort External complete, runtime: ", runtime, "second")
+	fmt.Println("Sorting Merge Sort External complete, runtime: ", runtime)
 
 	wg.Done()
 }

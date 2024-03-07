@@ -3,9 +3,8 @@ package model
 import (
 	"bufio"
 	"fmt"
-	"math/rand"
 	"os"
-	"time"
+	"strconv"
 
 	"main.go/common"
 	"main.go/helper"
@@ -71,11 +70,18 @@ func CreateData(path string, minValue, maxValue, numCount int64) error {
 		return err
 	}
 	defer file.Close()
-	rand.Seed(time.Now().UnixNano())
-	for i := int64(0); i < numCount; i++ {
-		number := rand.Int63n(maxValue-minValue+1) + minValue
-		_, err := fmt.Fprintln(file, number)
+	writer := bufio.NewWriter(file)
+	for i := numCount; i > 0; i-- {
+		number := strconv.FormatInt(i, 10)
+		number = number + "\n"
+		_, err := writer.WriteString(number)
 		if err != nil {
+			fmt.Println("An cuc roi, error: ", err)
+			return err
+		}
+		err = writer.Flush()
+		if err != nil {
+			fmt.Println("Error flushing buffer:", err)
 			return err
 		}
 	}

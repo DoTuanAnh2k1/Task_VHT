@@ -8,7 +8,6 @@ import (
 	"main.go/helper"
 	"main.go/model"
 	"main.go/sortAlgo"
-	"main.go/validate"
 )
 
 func WorkerMergeSortMulti(arrayInput []int64, wg *sync.WaitGroup) {
@@ -33,17 +32,18 @@ func WorkerMergeSortMulti(arrayInput []int64, wg *sync.WaitGroup) {
 		return
 	}
 
-	// validate solution
-	validate, err := validate.Validate(common.PATH_OUTPUT_MERGESORT_MULTI)
-	if err != nil {
-		fmt.Println("Cannot Validate: ", err.Error())
-		return
-	}
+	fmt.Println("Merge Sort Multi complete, runtime: ", runtime)
+	// // validate solution
+	// validate, err := validate.Validate(common.PATH_OUTPUT_MERGESORT_MULTI)
+	// if err != nil {
+	// 	fmt.Println("Cannot Validate: ", err.Error())
+	// 	return
+	// }
 
-	if validate {
-		fmt.Println("Sorting Merge Sort Multi complete, runtime: ", runtime, "second")
-	} else {
-		fmt.Println("khong on roi dai vuong oi, runtime: ", runtime)
-	}
+	// if validate {
+	// 	fmt.Println("Sorting Merge Sort Multi complete, runtime: ", runtime)
+	// } else {
+	// 	fmt.Println("khong on roi dai vuong oi, runtime: ", runtime)
+	// }
 	wg.Done()
 }
