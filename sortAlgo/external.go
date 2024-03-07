@@ -222,7 +222,7 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 					fmt.Println("Read from buffer fail, err: ", err)
 					return err
 				}
-				// TODO: Change to using object pool
+
 				newItem := poolObj.Acquire()
 				newItem.FileId = item.FileId
 				newItem.Priority = element

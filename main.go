@@ -12,7 +12,7 @@ import (
 func main() {
 	var wg sync.WaitGroup
 	// Create Data Input
-	flag := true
+	flag := false
 	if flag {
 		err := model.CreateData(
 			common.PATH_INPUT,
