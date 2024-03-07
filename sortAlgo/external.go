@@ -15,6 +15,33 @@ import (
 	"main.go/model"
 )
 
+func workerSort(arr []int64, outputFile *os.File, wg *sync.WaitGroup) error {
+	arrSep := helper.SeparateArray(common.NUMBER_OF_GOROUTINE, arr)
+	var wgChild sync.WaitGroup
+	for i := 0; i < common.NUMBER_OF_GOROUTINE; i++ {
+		wgChild.Add(1)
+		go SortingMulti(arrSep[i], &wgChild)
+	}
+	wgChild.Wait()
+	arr = MergeMultiArray(arrSep)
+
+	data := []byte{}
+
+	for j := 0; j < len(arr); j++ {
+		var binBuff bytes.Buffer
+		binary.Write(&binBuff, binary.BigEndian, arr[j])
+		data = append(data, binBuff.Bytes()...)
+	}
+	_, err := outputFile.Write(data)
+	if err != nil {
+		fmt.Println("Error while write to binary file, err: ", err)
+		return err
+	}
+	outputFile.Close()
+	wg.Done()
+	return nil
+}
+
 func CreateChunks(inputFilePath string) ([]*os.File, error) {
 	// For big input file
 	in := helper.OpenFile(inputFilePath, "r")
@@ -35,18 +62,17 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 
 	// Read from input file
 	moreInput := true
-	nextOutputFile := 0
+	nextOutputFile := -1
 	readFile := bufio.NewReader(in)
-	totalTimeSorting := float64(0)
 	totalTimeReadFile := float64(0)
-	totalTimeWriteFile := float64(0)
+	var wgSort sync.WaitGroup
 
 	for moreInput && nextOutputFile != common.NUMBER_OF_CHUCKS_FILE {
-		// Log process
-		if nextOutputFile%(common.NUMBER_OF_CHUCKS_FILE/10) == 0 {
-			fmt.Println("Working on file chunk id: ", nextOutputFile)
-		}
 		// Create an array to store and sort number in input file
+		nextOutputFile++
+		if nextOutputFile == common.NUMBER_OF_CHUCKS_FILE {
+			break
+		}
 		arr := []int64{}
 
 		timeReadFile := model.NewTimer()
@@ -65,53 +91,12 @@ func CreateChunks(inputFilePath string) ([]*os.File, error) {
 			arr = append(arr, element)
 		}
 		totalTimeReadFile = totalTimeReadFile + timeReadFile.Stop()
-
-		// Sort array using library
-		time_sorting := model.NewTimer()
-		time_sorting.Start()
-		arrSep := helper.SeparateArray(common.NUMBER_OF_GOROUTINE, arr)
-		var wgChild sync.WaitGroup
-		for i := 0; i < common.NUMBER_OF_GOROUTINE; i++ {
-			wgChild.Add(1)
-			go SortingMulti(arrSep[i], &wgChild)
-		}
-
-		wgChild.Wait()
-		arr = MergeMultiArray(arrSep)
-		// sort.Slice(arr, func(i, j int) bool {
-		// 	return arr[i] < arr[j]
-		// })
-		totalTimeSorting = totalTimeSorting + float64(time_sorting.Stop())
-
-		// Write array to buffer and from buffer to chunk file
-		data := []byte{}
-		timeWriteFile := model.NewTimer()
-		timeWriteFile.Start()
-
-		for j := 0; j < len(arr); j++ {
-			var binBuff bytes.Buffer
-			binary.Write(&binBuff, binary.BigEndian, arr[j])
-			data = append(data, binBuff.Bytes()...)
-		}
-
-		_, err := out[nextOutputFile].Write(data)
-		if err != nil {
-			fmt.Println("Error while write to binary file, err: ", err)
-			return nil, err
-		}
-		totalTimeWriteFile = totalTimeWriteFile + timeWriteFile.Stop()
-
-		nextOutputFile++
+		wgSort.Add(1)
+		go workerSort(arr, out[nextOutputFile], &wgSort)
 	}
+	wgSort.Wait()
 
-	fmt.Println("Total time sorting: 	", totalTimeSorting)
 	fmt.Println("Total time read file: 	", totalTimeReadFile)
-	fmt.Println("Total time write file: ", totalTimeWriteFile)
-
-	// Close chunks files
-	for i := 0; i < common.NUMBER_OF_CHUCKS_FILE; i++ {
-		out[i].Close()
-	}
 	return out, nil
 }
 
@@ -192,16 +177,13 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 	checkRemain := make([]int, common.NUMBER_OF_CHUCKS_FILE)
 	bufferAnswer := ""
 	countBuffer := 0
-	countNumberLog := 0
+
 	// While len PQ > 0, push the top of queue.
 	// If that element of file remain == 0 then push more
 	// number of that file in queue.
 	// When count buffer == common.COUNT_BUFFER then write bufferAns
 	// to output file and restart the count.
 	for pq.Len() > 0 {
-		if countNumberLog%(common.NUMBER_OF_NUMBER/10) == 0 {
-			fmt.Println("Working process, numbers: ", countNumberLog)
-		}
 		item := heap.Pop(&pq).(*model.Item)
 		bufferAnswer = bufferAnswer + strconv.FormatInt(item.Priority, 10) + "\n"
 		countBuffer++

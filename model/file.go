@@ -73,6 +73,7 @@ func CreateData(path string, minValue, maxValue, numCount int64) error {
 	writer := bufio.NewWriter(file)
 	for i := numCount; i > 0; i-- {
 		number := strconv.FormatInt(i, 10)
+		number = number + "\n"
 		_, err := writer.WriteString(number)
 		if err != nil {
 			fmt.Println("An cuc roi, error: ", err)
