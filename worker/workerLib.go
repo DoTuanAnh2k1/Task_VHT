@@ -9,15 +9,19 @@ import (
 	"main.go/sortAlgo"
 )
 
-func WorkerLibSort(arr []int64, wg *sync.WaitGroup) {
+func WorkerLibSort(wg *sync.WaitGroup) {
 	t := model.NewTimer()
 	f := model.NewFileManager()
+	arr, err := f.ReadFromFile(common.PATH_INPUT)
+	if err != nil {
+		fmt.Println("Cannot Read Input File, error: ", err)
+	}
 	t.Start()
 
 	arrayOutput := sortAlgo.LibSort(arr)
 	runtime := t.Stop()
 
-	err := f.WriteToFile(arrayOutput, common.PATH_OUTPUT_LIB_SORT)
+	err = f.WriteToFile(arrayOutput, common.PATH_OUTPUT_LIB_SORT)
 	if err != nil {
 		fmt.Println("Cannot Write to file Merge Sort Only: ", err.Error())
 	}

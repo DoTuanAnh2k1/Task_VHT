@@ -10,10 +10,14 @@ import (
 	"main.go/sortAlgo"
 )
 
-func WorkerMergeSortMulti(arrayInput []int64, wg *sync.WaitGroup) {
+func WorkerMergeSortMulti(wg *sync.WaitGroup) {
 	t := model.NewTimer()
 	var wgChild sync.WaitGroup
 	f := model.NewFileManager()
+	arrayInput, err := f.ReadFromFile(common.PATH_INPUT)
+	if err != nil {
+		fmt.Println("Cannot Read Input File, error: ", err)
+	}
 	t.Start()
 	// Separate Array
 	array_separate := helper.SeparateArray(common.NUMBER_OF_GOROUTINE, arrayInput)
@@ -26,7 +30,7 @@ func WorkerMergeSortMulti(arrayInput []int64, wg *sync.WaitGroup) {
 	runtime := t.Stop()
 	// exec Multi Merge Sort algorithm
 	arrayOutput := sortAlgo.MergeMultiArray(array_separate)
-	err := f.WriteToFile(arrayOutput, common.PATH_OUTPUT_MERGESORT_MULTI)
+	err = f.WriteToFile(arrayOutput, common.PATH_OUTPUT_MERGESORT_MULTI)
 	if err != nil {
 		fmt.Println("Cannot Write to file: ", err.Error())
 		return

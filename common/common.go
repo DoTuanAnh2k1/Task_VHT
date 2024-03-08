@@ -15,7 +15,7 @@ const (
 	PATH_TEMP = "data/temp"
 
 	// Max value in file
-	MAXVALUE = 4_000_000_000
+	MAXVALUE = 1_000_000_000_000_000
 
 	// Min value in file
 	MINVALUE = 1
@@ -33,9 +33,6 @@ const (
 
 	// Number of chunks
 	NUMBER_OF_CHUCKS_FILE = NUMBER_OF_NUMBER / CHUNK_SIZE
-
-	// Int max in Golang
-	MAX_INT = ^uint(0) >> 1
 
 	// Buffer byte per file
 	BYTES_BUFF_FILE = 2048

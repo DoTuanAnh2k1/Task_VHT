@@ -71,8 +71,9 @@ func CreateData(path string, minValue, maxValue, numCount int64) error {
 	}
 	defer file.Close()
 	writer := bufio.NewWriter(file)
+	x := maxValue
 	for i := numCount; i > 0; i-- {
-		number := strconv.FormatInt(i, 10)
+		number := strconv.FormatInt(x, 10)
 		number = number + "\n"
 		_, err := writer.WriteString(number)
 		if err != nil {
@@ -84,6 +85,7 @@ func CreateData(path string, minValue, maxValue, numCount int64) error {
 			fmt.Println("Error flushing buffer:", err)
 			return err
 		}
+		x--
 	}
 	fmt.Println("Time gen data: ", t.Stop())
 	return nil

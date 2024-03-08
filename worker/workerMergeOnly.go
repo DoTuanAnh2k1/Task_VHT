@@ -9,16 +9,20 @@ import (
 	"main.go/sortAlgo"
 )
 
-func WorkerMergeSortOnly(arr []int64, wg *sync.WaitGroup) {
+func WorkerMergeSortOnly(wg *sync.WaitGroup) {
 	t := model.NewTimer()
 	f := model.NewFileManager()
+	arr, err := f.ReadFromFile(common.PATH_INPUT)
+	if err != nil {
+		fmt.Println("Cannot Read Input File, error: ", err)
+	}
 	t.Start()
 
 	// exec Merge Sort algorithm
 	arrayOutput := sortAlgo.MergeSort(arr)
 	runtime := t.Stop()
 
-	err := f.WriteToFile(arrayOutput, common.PATH_OUTPUT_MERGESORT_ONLY)
+	err = f.WriteToFile(arrayOutput, common.PATH_OUTPUT_MERGESORT_ONLY)
 	if err != nil {
 		fmt.Println("Cannot Write to file Merge Sort Only: ", err.Error())
 	}
