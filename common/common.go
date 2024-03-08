@@ -21,15 +21,15 @@ const (
 	MINVALUE = 1
 
 	// Number of num in file
-	// NUMBER_OF_NUMBER = 4_000_000_000
-	NUMBER_OF_NUMBER = 10_000
+	NUMBER_OF_NUMBER = 4_000_000_000
+	// NUMBER_OF_NUMBER = 10_000
 
 	// Number of goroutine running
 	NUMBER_OF_GOROUTINE = 16
 
 	// Number of num in one file chunk
-	// CHUNK_SIZE = 50_000_000
-	CHUNK_SIZE = 5_000
+	CHUNK_SIZE = 50_000_000
+	// CHUNK_SIZE = 5_000
 
 	// Number of chunks
 	NUMBER_OF_CHUCKS_FILE = NUMBER_OF_NUMBER / CHUNK_SIZE
@@ -44,5 +44,5 @@ const (
 	COUNT_BUFFER = 50
 
 	// Size of pool object
-	POOL_SIZE = NUMBER_OF_CHUCKS_FILE * (BYTES_BUFF_FILE / 8)
+	POOL_SIZE = NUMBER_OF_CHUCKS_FILE * (BYTES_BUFF_FILE / 8) * 2
 )

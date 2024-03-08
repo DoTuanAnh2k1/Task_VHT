@@ -1,5 +1,7 @@
 package model
 
+import "fmt"
+
 type Pool struct {
 	objects     *LinkedList
 	initialSize int
@@ -18,7 +20,8 @@ func NewObjectPool(initialSize int) *Pool {
 
 func (p *Pool) Acquire(fId int, pri int64) *Item {
 	if p.objects.Len() == 0 {
-		return &Item{}
+		fmt.Println("Generate item...")
+		p.objects.PushBack(&Item{})
 	}
 
 	obj := p.objects.PopBack()

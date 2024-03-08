@@ -7,7 +7,10 @@ type Item struct {
 	FileId   int   // The value of the item; arbitrary.
 	Priority int64 // The priority of the item in the queue.
 	// The Index is needed by update and is maintained by the heap.Interface methods.
-	Index int // The index of the item in the heap.
+	Index int // The index of the item in the heap.\
+
+	Next *Item
+	Prev *Item
 }
 
 // A PriorityQueue implements heap.Interface and holds Items.

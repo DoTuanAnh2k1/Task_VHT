@@ -180,7 +180,7 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 	// to output file and restart the count.
 	for pq.Len() > 0 {
 		if processNums%(common.NUMBER_OF_NUMBER/10) == 0 {
-			fmt.Println("Processing ", (processNums*100)/common.NUMBER_OF_NUMBER, "%")
+			fmt.Println("Processing ", (processNums*100)/common.NUMBER_OF_NUMBER, "%, time: ", timeMergeChunks.Stop())
 		}
 		item := heap.Pop(&pq).(*model.Item)
 		bufferAnswer = bufferAnswer + strconv.FormatInt(item.Priority, 10) + "\n"
@@ -260,8 +260,8 @@ func MergeChunks(out_createChunks []*os.File, outputFilePath string) error {
 // External Merge Sort algorithm
 func ExternalMergeSort(inputFilePath, outputFilePath string) error {
 	// Create chunks phrase
-	time_create_chunks := model.NewTimer()
-	time_create_chunks.Start()
+	timeCreateChunks := model.NewTimer()
+	timeCreateChunks.Start()
 	fmt.Println("===================================================================")
 	fmt.Println("Create Chunks")
 	fmt.Println("===================================================================")
@@ -270,11 +270,11 @@ func ExternalMergeSort(inputFilePath, outputFilePath string) error {
 		fmt.Println("External Merge Sort, error: ", err)
 		return err
 	}
-	fmt.Println("Create Chunks success, runtime: ", time_create_chunks.Stop())
+	fmt.Println("Create Chunks success, runtime: ", timeCreateChunks.Stop())
 
 	// Merge chunks phrase
-	time_merge_chunks := model.NewTimer()
-	time_merge_chunks.Start()
+	timeMergeChunks := model.NewTimer()
+	timeMergeChunks.Start()
 	fmt.Println("===================================================================")
 	fmt.Println("Merge Chunks")
 	fmt.Println("===================================================================")
@@ -283,11 +283,11 @@ func ExternalMergeSort(inputFilePath, outputFilePath string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("Merge Chunks success, runtime: ", time_merge_chunks.Stop())
+	fmt.Println("Merge Chunks success, runtime: ", timeMergeChunks.Stop())
 
 	// Remove chunks
-	time_remove_chunks := model.NewTimer()
-	time_remove_chunks.Start()
+	timeRemoveChunks := model.NewTimer()
+	timeRemoveChunks.Start()
 	fmt.Println("===================================================================")
 	fmt.Println("Remove Chunks")
 	fmt.Println("===================================================================")
@@ -298,6 +298,6 @@ func ExternalMergeSort(inputFilePath, outputFilePath string) error {
 			return err
 		}
 	}
-	fmt.Println("Remove Chunks success, runtime: ", time_remove_chunks.Stop())
+	fmt.Println("Remove Chunks success, runtime: ", timeRemoveChunks.Stop())
 	return nil
 }
